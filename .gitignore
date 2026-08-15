@@ -1,0 +1,8 @@
+# Ignore uploaded shared files, keep directory structure
+shared_files/*
+!shared_files/.gitkeep
+
+# System & temporary files
+shared_text.json
+.DS_Store
+Thumbs.db
