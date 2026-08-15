@@ -243,16 +243,58 @@ body {
     100% { transform: scale(1.4); opacity: 0; }
 }
 
-.airdrop-info h2 {
-    font-size: 1.25rem;
-    font-weight: 700;
+.banner-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
     margin-bottom: 6px;
 }
 
+.banner-top-row h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.pin-badge-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(52, 199, 89, 0.2));
+    border: 1px solid rgba(0, 122, 255, 0.4);
+    padding: 4px 14px;
+    border-radius: var(--radius-pill);
+    font-size: 0.8rem;
+}
+
+.pin-badge-box .pin-label {
+    color: var(--text-tertiary);
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+}
+
+.pin-badge-box .pin-number {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--ios-green);
+    letter-spacing: 2px;
+}
+
 .airdrop-info p {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     color: var(--text-secondary);
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+}
+
+.pin-join-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .lan-url-box {
@@ -290,6 +332,130 @@ body {
 
 .copy-pill-btn:hover {
     opacity: 0.85;
+}
+
+.join-pin-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--card-border);
+    padding: 3px 4px 3px 10px;
+    border-radius: var(--radius-pill);
+}
+
+.join-pin-box input {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    width: 120px;
+    outline: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ios-btn.small-btn {
+    padding: 5px 14px;
+    font-size: 0.78rem;
+}
+
+/* Nearby Devices Card */
+.nearby-devices-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-soft);
+}
+
+.nearby-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.nearby-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.pulse-icon {
+    width: 10px;
+    height: 10px;
+    background-color: var(--ios-blue);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--ios-blue);
+    animation: blink 1.5s infinite;
+}
+
+.device-count-tag {
+    font-size: 0.76rem;
+    background: rgba(0, 122, 255, 0.15);
+    color: var(--ios-blue);
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+}
+
+.nearby-devices-list {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.nearby-device-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.nearby-device-chip:hover {
+    background: rgba(0, 122, 255, 0.12);
+    border-color: rgba(0, 122, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+.nearby-device-chip.is-me {
+    border-color: var(--ios-green);
+    background: rgba(52, 199, 89, 0.1);
+}
+
+.nearby-device-chip .dev-icon {
+    font-size: 1.2rem;
+}
+
+.nearby-device-chip .dev-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.nearby-device-chip .dev-title {
+    font-weight: 600;
+    font-size: 0.82rem;
+}
+
+.nearby-device-chip .dev-sub {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
 }
 
 /* iOS 13 Segmented Control */

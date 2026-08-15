@@ -66,15 +66,43 @@
                 </div>
             </div>
             <div class="airdrop-info">
-                <h2>Direct Phone Hotspot Sharing</h2>
-                <p>Transfer files between <strong>iPhone</strong>, <strong>Android</strong> &amp; <strong>Windows PC</strong> seamlessly at high Wi-Fi speeds without consuming any mobile data!</p>
-                <div class="lan-url-box" id="lanUrlBox">
-                    <span class="label">Share URL:</span>
-                    <span class="url" id="serverFullUrl">http://...</span>
-                    <button class="copy-pill-btn" id="copyUrlBtn">Copy</button>
+                <div class="banner-top-row">
+                    <h2>Direct Device &amp; Room PIN Sharing</h2>
+                    <div class="pin-badge-box">
+                        <span class="pin-label">YOUR ROOM PIN:</span>
+                        <span class="pin-number" id="myRoomPin">---</span>
+                    </div>
+                </div>
+                <p>Connect devices on the same Wi-Fi / Hotspot or enter a <strong>4-Digit PIN</strong> to share files &amp; text instantly!</p>
+
+                <div class="pin-join-row">
+                    <div class="lan-url-box" id="lanUrlBox">
+                        <span class="label">Share URL:</span>
+                        <span class="url" id="serverFullUrl">http://...</span>
+                        <button class="copy-pill-btn" id="copyUrlBtn">Copy</button>
+                    </div>
+
+                    <div class="join-pin-box">
+                        <input type="text" id="joinPinInput" placeholder="Enter 4-Digit PIN" maxlength="6">
+                        <button class="ios-btn primary small-btn" id="joinPinBtn">Join Room</button>
+                    </div>
                 </div>
             </div>
         </section>
+
+        <!-- Discovered Nearby Devices Bar -->
+        <div class="nearby-devices-card" id="nearbyDevicesCard">
+            <div class="nearby-header">
+                <div class="nearby-title">
+                    <span class="pulse-icon"></span>
+                    <span>AirDrop Devices Nearby (Same Wi-Fi / PIN Room)</span>
+                </div>
+                <span class="device-count-tag" id="connectedDevicesCount">1 Device Active</span>
+            </div>
+            <div class="nearby-devices-list" id="nearbyDevicesList">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
 
         <!-- iOS 13 Segmented Control -->
         <div class="segmented-control-wrapper">

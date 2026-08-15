@@ -6,10 +6,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // App State
     let currentServerIp = window.location.hostname || '127.0.0.1';
     let currentServerPort = window.location.port || '8080';
-    let currentServerUrl = window.location.origin || `http://${currentServerIp}:${currentServerPort}`;
+    let currentServerUrl = getCleanBaseUrl();
     let allFiles = [];
     let activeFilter = 'all';
     let isUploading = false;
+
+    // Room PIN & Peer State
+    let currentRoomPin = getOrInitRoomPin();
+    let myDeviceId = 'dev_' + Math.random().toString(36).substr(2, 6);
+    let myDeviceInfo = getDeviceTypeInfo();
+    let activeDevicesMap = new Map();
+    let peerChannel = null;
 
     // DOM Elements
     const dropZone = document.getElementById('dropZone');
@@ -29,6 +36,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadSpeed = document.getElementById('uploadSpeed');
     const uploadStatusText = document.getElementById('uploadStatusText');
 
+    // PIN & Nearby Device Elements
+    const myRoomPin = document.getElementById('myRoomPin');
+    const joinPinInput = document.getElementById('joinPinInput');
+    const joinPinBtn = document.getElementById('joinPinBtn');
+    const nearbyDevicesList = document.getElementById('nearbyDevicesList');
+    const connectedDevicesCount = document.getElementById('connectedDevicesCount');
+
     // Text Sharing Elements
     const shareTextInput = document.getElementById('shareTextInput');
     const sendTextBtn = document.getElementById('sendTextBtn');
@@ -46,6 +60,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeQrModalBtn = document.getElementById('closeQrModalBtn');
     const themeToggleBtn = document.getElementById('themeToggleBtn');
 
+    // Helper: Clean Base URL (Preserves GitHub Pages subpath /sharemax/ to avoid 404)
+    function getCleanBaseUrl() {
+        let href = window.location.href.split('?')[0].split('#')[0];
+        if (!href.endsWith('/') && !href.endsWith('.html')) {
+            href += '/';
+        }
+        return href;
+    }
+
+    // Helper: Room PIN Init
+    function getOrInitRoomPin() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const pinFromUrl = urlParams.get('pin');
+        if (pinFromUrl && pinFromUrl.trim().length >= 3) {
+            return pinFromUrl.trim().toUpperCase();
+        }
+        let savedPin = localStorage.getItem('sharemax_room_pin');
+        if (!savedPin) {
+            savedPin = Math.floor(1000 + Math.random() * 9000).toString();
+            localStorage.setItem('sharemax_room_pin', savedPin);
+        }
+        return savedPin;
+    }
+
+    // Helper: Device Detection
+    function getDeviceTypeInfo() {
+        const ua = navigator.userAgent;
+        let name = 'Device';
+        let icon = '💻';
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+            name = 'iPhone (iOS)';
+            icon = '📱';
+        } else if (/Android/i.test(ua)) {
+            name = 'Android Phone';
+            icon = '🤖';
+        } else if (/Macintosh|Mac OS X/i.test(ua)) {
+            name = 'Mac Book';
+            icon = '💻';
+        } else if (/Windows/i.test(ua)) {
+            name = 'Windows PC';
+            icon = '💻';
+        }
+        return { name, icon };
+    }
+
     // 1. Initialize App & Fetch Server Info
     initApp();
 
@@ -54,17 +113,132 @@ document.addEventListener('DOMContentLoaded', () => {
         setupDragAndDrop();
         setupFilters();
         setupEventListeners();
+        setupPinAndPeerChannel();
         await fetchServerInfo();
         await fetchFiles();
         await fetchSharedText();
         
-        // Periodic auto-refresh every 3.5 seconds
+        // Periodic auto-refresh every 3 seconds
         setInterval(() => {
             if (!isUploading) {
                 fetchFiles(true);
                 fetchSharedText();
             }
-        }, 3500);
+        }, 3000);
+    }
+
+    // 1.5 Setup PIN & Broadcast Channel
+    function setupPinAndPeerChannel() {
+        if (myRoomPin) myRoomPin.textContent = currentRoomPin;
+        if (joinPinInput) joinPinInput.value = currentRoomPin;
+
+        // Register self in active devices
+        activeDevicesMap.set(myDeviceId, {
+            id: myDeviceId,
+            name: myDeviceInfo.name + ' (You)',
+            icon: myDeviceInfo.icon,
+            pin: currentRoomPin,
+            lastSeen: Date.now(),
+            isMe: true
+        });
+        renderNearbyDevices();
+
+        // BroadcastChannel for instant local tab/device sync
+        try {
+            if (peerChannel) peerChannel.close();
+            peerChannel = new BroadcastChannel('sharemax_room_' + currentRoomPin);
+            
+            peerChannel.onmessage = (e) => {
+                const msg = e.data;
+                if (!msg) return;
+
+                if (msg.type === 'ping') {
+                    activeDevicesMap.set(msg.deviceId, {
+                        id: msg.deviceId,
+                        name: msg.deviceName,
+                        icon: msg.deviceIcon,
+                        pin: msg.pin,
+                        lastSeen: Date.now(),
+                        isMe: false
+                    });
+                    renderNearbyDevices();
+                } else if (msg.type === 'file_added') {
+                    fetchFiles(true);
+                } else if (msg.type === 'text_added') {
+                    fetchSharedText();
+                }
+            };
+
+            // Send ping heartbeat every 2s
+            setInterval(() => {
+                if (peerChannel) {
+                    peerChannel.postMessage({
+                        type: 'ping',
+                        deviceId: myDeviceId,
+                        deviceName: myDeviceInfo.name,
+                        deviceIcon: myDeviceInfo.icon,
+                        pin: currentRoomPin
+                    });
+                }
+                cleanupStaleDevices();
+            }, 2000);
+        } catch (e) {
+            console.log('BroadcastChannel not supported in this browser.');
+        }
+
+        // Handle Join PIN button click
+        if (joinPinBtn && joinPinInput) {
+            joinPinBtn.addEventListener('click', () => {
+                const inputVal = joinPinInput.value.trim().toUpperCase();
+                if (inputVal.length >= 3) {
+                    currentRoomPin = inputVal;
+                    localStorage.setItem('sharemax_room_pin', currentRoomPin);
+                    if (myRoomPin) myRoomPin.textContent = currentRoomPin;
+                    setupPinAndPeerChannel();
+                    updateShareUrlsAndQRCodes();
+                    fetchFiles();
+                    fetchSharedText();
+                    showToast(`🔑 Joined Room PIN: ${currentRoomPin}`);
+                } else {
+                    showToast('⚠️ Please enter a valid PIN');
+                }
+            });
+        }
+    }
+
+    function cleanupStaleDevices() {
+        const now = Date.now();
+        let changed = false;
+        activeDevicesMap.forEach((device, id) => {
+            if (!device.isMe && (now - device.lastSeen > 6000)) {
+                activeDevicesMap.delete(id);
+                changed = true;
+            }
+        });
+        if (changed) renderNearbyDevices();
+    }
+
+    function renderNearbyDevices() {
+        if (!nearbyDevicesList) return;
+        nearbyDevicesList.innerHTML = '';
+        
+        const count = activeDevicesMap.size;
+        if (connectedDevicesCount) {
+            connectedDevicesCount.textContent = `${count} Device${count > 1 ? 's' : ''} Connected (PIN ${currentRoomPin})`;
+        }
+
+        activeDevicesMap.forEach((device) => {
+            const chip = document.createElement('div');
+            chip.className = `nearby-device-chip ${device.isMe ? 'is-me' : ''}`;
+            chip.innerHTML = `
+                <span class="dev-icon">${device.icon}</span>
+                <div class="dev-details">
+                    <span class="dev-title">${escapeHtml(device.name)}</span>
+                    <span class="dev-sub">PIN: ${device.pin}</span>
+                </div>
+            `;
+            nearbyDevicesList.appendChild(chip);
+        });
     }
 
     // 2. Fetch Server Info & Generate QR Codes
@@ -75,20 +249,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 if (data.ip) currentServerIp = data.ip;
                 if (data.port) currentServerPort = data.port;
-                currentServerUrl = `http://${currentServerIp}:${currentServerPort}`;
+                currentServerUrl = `http://${currentServerIp}:${currentServerPort}/`;
+            } else {
+                currentServerUrl = getCleanBaseUrl();
             }
         } catch (e) {
-            console.log('Server info endpoint unreachable. Using window location.');
+            currentServerUrl = getCleanBaseUrl();
         }
 
-        ipAddressText.textContent = `IP: ${currentServerIp}`;
-        serverFullUrl.textContent = currentServerUrl;
-        document.getElementById('codeUrlDisplay').textContent = currentServerUrl;
-        document.getElementById('guideQrUrl').textContent = currentServerUrl;
-        document.getElementById('popupQrUrl').textContent = currentServerUrl;
+        updateShareUrlsAndQRCodes();
+    }
 
-        // Render QR Code in Tab 3 & Popup Modal
-        renderQRCodes(currentServerUrl);
+    function updateShareUrlsAndQRCodes() {
+        let finalShareUrl = currentServerUrl;
+        if (finalShareUrl.includes('github.io') || finalShareUrl.includes('localhost') || !finalShareUrl.includes('?')) {
+            finalShareUrl = getCleanBaseUrl() + `?pin=${currentRoomPin}`;
+        }
+
+        if (ipAddressText) ipAddressText.textContent = `IP: ${currentServerIp}`;
+        if (serverFullUrl) serverFullUrl.textContent = finalShareUrl;
+        
+        const codeDisplay = document.getElementById('codeUrlDisplay');
+        const guideUrl = document.getElementById('guideQrUrl');
+        const popupUrl = document.getElementById('popupQrUrl');
+
+        if (codeDisplay) codeDisplay.textContent = finalShareUrl;
+        if (guideUrl) guideUrl.textContent = finalShareUrl;
+        if (popupUrl) popupUrl.textContent = finalShareUrl;
+
+        // Render QR Code with PIN included
+        renderQRCodes(finalShareUrl);
     }
 
     function renderQRCodes(url) {
